@@ -109,7 +109,9 @@ The sub-agents are defined in the `blogger_agent/sub_agents/` directory. Each su
 
 The agents use the following custom tools, defined in `blogger_agent/tools.py`:
 
-*   **`save_blog_post_to_file`**: Saves the blog post to a file.
+*   **`save_blog_post_to_gcs`**: Saves the blog post to a Google Cloud Storage bucket. This is the only supported way to save a post.
+*   **`generate_blog_image`**: Generates an image with Gemini's image model (`gemini-2.5-flash-image`, aka "Nano Banana") and uploads it to a GCS bucket.
+*   **`upload_local_image_to_gcs`**: Uploads a user-provided local image file to a GCS bucket.
 *   **`analyze_codebase`**: Analyzes the codebase in a given directory to provide context for the blog post.
 
 The agents also use the built-in `google_search` tool.
@@ -121,11 +123,11 @@ The `interactive_blogger_agent` follows this workflow:
 1.  **Analyze Codebase (Optional):** If the user provides a directory, the agent analyzes the codebase to understand its structure and content.
 2.  **Plan:** The agent delegates the task of generating a blog post outline to the `robust_blog_planner`.
 3.  **Refine:** The user can provide feedback to refine the outline. The agent continues to refine the outline until it is approved by the user.
-4.  **Visuals:** The agent asks the user to choose their preferred method for including visual content.
-5.  **Write:** Once the user approves the outline, the agent delegates the task of writing the blog post to the `robust_blog_writer`.
-6.  **Edit:** After the first draft is written, the agent presents it to the user and asks for feedback. The `blog_editor` revises the blog post based on the feedback. This process is repeated until the user is satisfied with the result.
+4.  **Write:** Once the user approves the outline, the agent delegates the task of writing the blog post to the `robust_blog_writer`.
+5.  **Edit:** After the first draft is written, the agent presents it to the user and asks for feedback. The `blog_editor` revises the blog post based on the feedback. This process is repeated until the user is satisfied with the result.
+6.  **Images:** Once the content is approved, the agent asks if the user wants images (up to 5, added one at a time). Each image is either generated with `generate_blog_image` or uploaded with `upload_local_image_to_gcs`, then inserted into the post at the location the user specifies.
 7.  **Social Media:** After the user approves the blog post, the agent asks if they want to generate social media posts. If the user agrees, the `social_media_writer` is used.
-8.  **Export:** When the user approves the final version, the agent asks for a filename and saves the blog post as a markdown file using the `save_blog_post_to_file` tool.
+8.  **Export:** When the user approves the final version, the agent asks for a GCS bucket name and destination filename, then saves the post with `save_blog_post_to_gcs`. There is no local-file export option — saving only happens to GCS.
 
 ## Example Conversation
 

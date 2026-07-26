@@ -40,6 +40,7 @@ class ResearchConfiguration:
 
     critic_model: str = "gemini-2.5-pro"
     worker_model: str = "gemini-2.5-flash"
+    image_model: str = "gemini-2.5-flash-image"
     max_search_iterations: int = 5
 
 
