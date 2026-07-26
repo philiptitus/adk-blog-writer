@@ -68,7 +68,6 @@ def generate_blog_image(prompt: str, bucket_name: str, destination_filename: str
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_filename)
     blob.upload_from_string(image_bytes, content_type="image/png")
-    blob.make_public()
     return {
         "status": "success",
         "gcs_uri": f"gs://{bucket_name}/{destination_filename}",
@@ -98,7 +97,6 @@ def upload_local_image_to_gcs(
     blob.upload_from_filename(
         local_path, content_type=content_type or "application/octet-stream"
     )
-    blob.make_public()
     return {
         "status": "success",
         "gcs_uri": f"gs://{bucket_name}/{destination_filename}",
