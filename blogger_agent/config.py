@@ -85,5 +85,7 @@ GITHUB_MCP_SERVER_URL: str = "https://api.githubcopilot.com/mcp/"
 # to enable the Custom Search API and mint an API key.
 IMAGE_SEARCH_RESULT_COUNT: int = 3
 # Google Custom Search "rights" filter — restricts results to images marked
-# as reusable. Set to "" to disable filtering (not recommended by default).
-IMAGE_SEARCH_RIGHTS_FILTER: str = "cc_publicdomain,cc_attribute,cc_sharealike"
+# as reusable. Combinators are "|" (OR), "." (AND), "-" (NOT) — NOT commas,
+# which the API rejects with a 400 INVALID_ARGUMENT error.
+# Set to "" to disable filtering (not recommended by default).
+IMAGE_SEARCH_RIGHTS_FILTER: str = "cc_publicdomain|cc_attribute|cc_sharealike"
