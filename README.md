@@ -109,7 +109,8 @@ The agents use the following custom tools, defined in `blogger_agent/tools.py`:
 
 *   **`save_blog_post_to_gcs`**: Saves the blog post to a Google Cloud Storage bucket. This is the only supported way to save a post.
 *   **`generate_blog_image`**: Generates an image with Gemini's image model (`gemini-2.5-flash-image`, aka "Nano Banana") and uploads it to a GCS bucket.
-*   **`upload_local_image_to_gcs`**: Uploads a user-provided local image file to a GCS bucket.
+*   **`search_public_images`**: Finds existing public images (e.g. a brand logo) via the Google Custom Search API. Requires `GOOGLE_CSE_API_KEY` and `GOOGLE_CSE_ID` env vars.
+*   **`mirror_public_image_to_gcs`**: Downloads a URL returned by `search_public_images` and stores a permanent copy in GCS.
 *   **`set_blog_length`**: Records the user's chosen post length (short/medium/long) for the session.
 
 It also connects to GitHub's remote MCP server (`github_mcp_toolset` in `blogger_agent/agent.py`) to browse/read public repositories for codebase context, and uses the built-in `google_search` tool.
@@ -124,7 +125,7 @@ The `interactive_blogger_agent` follows this workflow:
 4.  **Length:** The agent asks whether the post should be short/medium/long (word targets configurable in `BLOG_LENGTH_WORD_LIMITS` in `blogger_agent/config.py`); defaults to "medium" if unspecified.
 5.  **Write:** Once the user approves the outline, the agent delegates the task of writing the blog post to the `robust_blog_writer`.
 6.  **Edit:** After the first draft is written, the agent presents it to the user and asks for feedback. The `blog_editor` revises the blog post based on the feedback. This process is repeated until the user is satisfied with the result.
-7.  **Images:** Once the content is approved, the agent asks if the user wants images (up to 5, added one at a time). Each image is either generated with `generate_blog_image` or uploaded with `upload_local_image_to_gcs`, then inserted into the post at the location the user specifies.
+7.  **Images:** Once the content is approved, the agent asks if the user wants images (up to 5, added one at a time). Each image is either generated with `generate_blog_image` or found online with `search_public_images` and mirrored into GCS with `mirror_public_image_to_gcs`, then inserted into the post at the location the user specifies.
 8.  **Export:** When the user approves the final version, the agent saves it automatically with `save_blog_post_to_gcs` — it never asks for a filename or path. It derives a filename slug from the post's title and the tool always stores it under the `drafts/` path (see `DEFAULT_BLOG_DRAFTS_PATH` in `blogger_agent/config.py`). There is no local-file export option — saving only happens to GCS. All GCS operations default to the `blogs-dev` bucket (see `DEFAULT_GCS_BUCKET` in `blogger_agent/config.py`) unless the user explicitly names a different bucket.
 
 ## Example Conversation

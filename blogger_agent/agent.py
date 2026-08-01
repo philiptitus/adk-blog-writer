@@ -36,9 +36,10 @@ from .sub_agents import (
 )
 from .tools import (
     generate_blog_image,
+    mirror_public_image_to_gcs,
     save_blog_post_to_gcs,
+    search_public_images,
     set_blog_length,
-    upload_local_image_to_gcs,
 )
 
 github_mcp_toolset = McpToolset(
@@ -69,13 +70,13 @@ interactive_blogger_agent = Agent(
     7.  **Images:** Once the user is happy with the written content, ask if they'd like to add images (up to 5 total). Images are only ever added one at a time:
         - For each image (max 5), ask the user to describe where in the post it goes and whether it should be:
           a. **Generated** — ask for a description of the image, then call `generate_blog_image` with that prompt and a unique `destination_filename` (e.g. "images/<slug>/image-<n>.png").
-          b. **Uploaded** — ask for the local file path, then call `upload_local_image_to_gcs` with that path and a unique `destination_filename`.
+          b. **Found online** (e.g. a company logo, a known person/place) — call `search_public_images` with a short query, show the user the returned results (title + source_page) to pick from, then call `mirror_public_image_to_gcs` with the chosen `image_url` and a unique `destination_filename` to make a permanent copy. Never invent or guess an image URL yourself — only use URLs returned by `search_public_images`.
         - After each successful call, insert a Markdown image tag (`![alt text](image_url)`) at the location the user specified by delegating to `blog_editor` with feedback describing exactly where to insert the returned `image_url`.
         - Stop after 5 images or as soon as the user says they're done, whichever comes first.
         - If the user doesn't want images, skip this step entirely.
     8.  **Export:** When the user approves the final version, save it automatically with the `save_blog_post_to_gcs` tool — never ask the user for a filename or path. Derive a filename yourself from the post's title (lowercase, hyphenated slug, e.g. "my-great-post.md") and pass just that as `filename`; the tool always stores it under the "{DEFAULT_BLOG_DRAFTS_PATH}/" path automatically. Saving only happens to Google Cloud Storage — there is no local-file export option. After saving, tell the user the resulting `gcs_uri`.
 
-    Storage: all GCS operations (saving the post, generating/uploading images) default to the "{DEFAULT_GCS_BUCKET}" bucket automatically — never ask the user for a bucket name. Only use a different bucket if the user explicitly names one. Blog posts always go under "{DEFAULT_BLOG_DRAFTS_PATH}/" (handled by the tool); images are unaffected by this and keep using the `destination_filename` you choose per image.
+    Storage: all GCS operations (saving the post, generating/mirroring images) default to the "{DEFAULT_GCS_BUCKET}" bucket automatically — never ask the user for a bucket name. Only use a different bucket if the user explicitly names one. Blog posts always go under "{DEFAULT_BLOG_DRAFTS_PATH}/" (handled by the tool); images are unaffected by this and keep using the `destination_filename` you choose per image.
 
     Current date: {datetime.datetime.now().strftime("%Y-%m-%d")}
     """,
@@ -87,7 +88,8 @@ interactive_blogger_agent = Agent(
     tools=[
         FunctionTool(save_blog_post_to_gcs),
         FunctionTool(generate_blog_image),
-        FunctionTool(upload_local_image_to_gcs),
+        FunctionTool(search_public_images),
+        FunctionTool(mirror_public_image_to_gcs),
         FunctionTool(set_blog_length),
         github_mcp_toolset,
     ],

@@ -75,3 +75,15 @@ DEFAULT_BLOG_DRAFTS_PATH: str = "drafts"
 # GITHUB_PERSONAL_ACCESS_TOKEN env var (a public-repo-read-only token is
 # enough). See https://github.com/github/github-mcp-server for details.
 GITHUB_MCP_SERVER_URL: str = "https://api.githubcopilot.com/mcp/"
+
+
+# --- Public image search settings ---
+# Used to find existing public images (e.g. "Nike logo") instead of
+# generating one. Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID env vars —
+# see https://programmablesearchengine.google.com/ to create a search engine
+# (with Image Search enabled) and https://console.cloud.google.com/apis/library/customsearch.googleapis.com
+# to enable the Custom Search API and mint an API key.
+IMAGE_SEARCH_RESULT_COUNT: int = 3
+# Google Custom Search "rights" filter — restricts results to images marked
+# as reusable. Set to "" to disable filtering (not recommended by default).
+IMAGE_SEARCH_RIGHTS_FILTER: str = "cc_publicdomain,cc_attribute,cc_sharealike"
