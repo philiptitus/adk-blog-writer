@@ -80,7 +80,6 @@ The project is organized as follows:
         *   `blog_planner.py`: Generates the blog post outline.
         *   `blog_writer.py`: Writes the blog post.
         *   `blog_editor.py`: Edits the blog post based on user feedback.
-        *   `social_media_writer.py`: Generates social media posts.
     *   `tools.py`: Defines the custom tools used by the agents.
     *   `config.py`: Contains the configuration for the agents, such as the models to use.
 *   `eval/`: Contains the evaluation framework for the agent.
@@ -103,7 +102,6 @@ The sub-agents are defined in the `blogger_agent/sub_agents/` directory. Each su
 *   **`robust_blog_planner`**: Generates a blog post outline. It uses a loop to ensure a valid outline is created and can use Google Search to gather information.
 *   **`robust_blog_writer`**: Writes the blog post based on the approved outline. It can also use Google Search to find relevant information and examples.
 *   **`blog_editor`**: Edits the blog post based on user feedback.
-*   **`social_media_writer`**: Generates social media posts to promote the blog post.
 
 ## Tools
 
@@ -112,22 +110,22 @@ The agents use the following custom tools, defined in `blogger_agent/tools.py`:
 *   **`save_blog_post_to_gcs`**: Saves the blog post to a Google Cloud Storage bucket. This is the only supported way to save a post.
 *   **`generate_blog_image`**: Generates an image with Gemini's image model (`gemini-2.5-flash-image`, aka "Nano Banana") and uploads it to a GCS bucket.
 *   **`upload_local_image_to_gcs`**: Uploads a user-provided local image file to a GCS bucket.
-*   **`analyze_codebase`**: Analyzes the codebase in a given directory to provide context for the blog post.
+*   **`set_blog_length`**: Records the user's chosen post length (short/medium/long) for the session.
 
-The agents also use the built-in `google_search` tool.
+It also connects to GitHub's remote MCP server (`github_mcp_toolset` in `blogger_agent/agent.py`) to browse/read public repositories for codebase context, and uses the built-in `google_search` tool.
 
 ## Workflow
 
 The `interactive_blogger_agent` follows this workflow:
 
-1.  **Analyze Codebase (Optional):** If the user provides a directory, the agent analyzes the codebase to understand its structure and content.
+1.  **Analyze Codebase (Optional):** If the user provides a public GitHub repository URL, the agent uses the GitHub MCP tools to browse and read its files for context.
 2.  **Plan:** The agent delegates the task of generating a blog post outline to the `robust_blog_planner`.
 3.  **Refine:** The user can provide feedback to refine the outline. The agent continues to refine the outline until it is approved by the user.
-4.  **Write:** Once the user approves the outline, the agent delegates the task of writing the blog post to the `robust_blog_writer`.
-5.  **Edit:** After the first draft is written, the agent presents it to the user and asks for feedback. The `blog_editor` revises the blog post based on the feedback. This process is repeated until the user is satisfied with the result.
-6.  **Images:** Once the content is approved, the agent asks if the user wants images (up to 5, added one at a time). Each image is either generated with `generate_blog_image` or uploaded with `upload_local_image_to_gcs`, then inserted into the post at the location the user specifies.
-7.  **Social Media:** After the user approves the blog post, the agent asks if they want to generate social media posts. If the user agrees, the `social_media_writer` is used.
-8.  **Export:** When the user approves the final version, the agent asks for a GCS bucket name and destination filename, then saves the post with `save_blog_post_to_gcs`. There is no local-file export option — saving only happens to GCS.
+4.  **Length:** The agent asks whether the post should be short/medium/long (word targets configurable in `BLOG_LENGTH_WORD_LIMITS` in `blogger_agent/config.py`); defaults to "medium" if unspecified.
+5.  **Write:** Once the user approves the outline, the agent delegates the task of writing the blog post to the `robust_blog_writer`.
+6.  **Edit:** After the first draft is written, the agent presents it to the user and asks for feedback. The `blog_editor` revises the blog post based on the feedback. This process is repeated until the user is satisfied with the result.
+7.  **Images:** Once the content is approved, the agent asks if the user wants images (up to 5, added one at a time). Each image is either generated with `generate_blog_image` or uploaded with `upload_local_image_to_gcs`, then inserted into the post at the location the user specifies.
+8.  **Export:** When the user approves the final version, the agent saves it automatically with `save_blog_post_to_gcs` — it never asks for a filename or path. It derives a filename slug from the post's title and the tool always stores it under the `drafts/` path (see `DEFAULT_BLOG_DRAFTS_PATH` in `blogger_agent/config.py`). There is no local-file export option — saving only happens to GCS. All GCS operations default to the `blogs-dev` bucket (see `DEFAULT_GCS_BUCKET` in `blogger_agent/config.py`) unless the user explicitly names a different bucket.
 
 ## Example Conversation
 

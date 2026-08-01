@@ -15,7 +15,18 @@
 from google.adk.agents.callback_context import CallbackContext
 from google.genai.types import Content
 
+from .config import BLOG_LENGTH_WORD_LIMITS, DEFAULT_BLOG_LENGTH
+
 
 def suppress_output_callback(callback_context: CallbackContext) -> Content:
     """Suppresses the output of the agent by returning an empty Content object."""
     return Content()
+
+
+def init_blog_length_defaults(callback_context: CallbackContext) -> None:
+    """Seeds a default blog length/word limit if the user hasn't set one yet."""
+    if "blog_length" not in callback_context.state:
+        callback_context.state["blog_length"] = DEFAULT_BLOG_LENGTH
+        callback_context.state["blog_word_limit"] = BLOG_LENGTH_WORD_LIMITS[
+            DEFAULT_BLOG_LENGTH
+        ]

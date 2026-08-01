@@ -13,22 +13,41 @@
 # limitations under the License.
 
 import datetime
+import os
 
 from google.adk.agents import Agent
 from google.adk.tools import FunctionTool
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 
-from .config import config
+from .agent_utils import init_blog_length_defaults
+from .config import (
+    BLOG_LENGTH_WORD_LIMITS,
+    DEFAULT_BLOG_DRAFTS_PATH,
+    DEFAULT_BLOG_LENGTH,
+    DEFAULT_GCS_BUCKET,
+    GITHUB_MCP_SERVER_URL,
+    config,
+)
 from .sub_agents import (
     blog_editor,
     robust_blog_planner,
     robust_blog_writer,
-    social_media_writer,
 )
 from .tools import (
-    analyze_codebase,
     generate_blog_image,
     save_blog_post_to_gcs,
+    set_blog_length,
     upload_local_image_to_gcs,
+)
+
+github_mcp_toolset = McpToolset(
+    connection_params=StreamableHTTPConnectionParams(
+        url=GITHUB_MCP_SERVER_URL,
+        headers={
+            "Authorization": f"Bearer {os.environ.get('GITHUB_PERSONAL_ACCESS_TOKEN', '')}"
+        },
+    ),
 )
 
 # --- AGENT DEFINITIONS ---
@@ -41,21 +60,22 @@ interactive_blogger_agent = Agent(
     You are a technical blogging assistant. Your primary function is to help users create technical blog posts.
 
     Your workflow is as follows:
-    1.  **Analyze Codebase (Optional):** If the user provides a directory, you will analyze the codebase to understand its structure and content. To do this, use the `analyze_codebase` tool.
+    1.  **Analyze Codebase (Optional):** If the user provides a public GitHub repository URL, use the available GitHub tools to browse and read its files (structure, key source files, README) so you understand it before planning. Keep a concise summary of what you learned in the conversation — the planner and writer will need it as codebase context.
     2.  **Plan:** You will generate a blog post outline and present it to the user. To do this, use the `robust_blog_planner` tool.
     3.  **Refine:** The user can provide feedback to refine the outline. You will continue to refine the outline until it is approved by the user.
-    4.  **Write:** Once the user approves the outline, you will write the blog post. To do this, use the `robust_blog_writer` tool. Be then open for feedback.
-    5.  **Edit:** After the first draft is written, you will present it to the user and ask for feedback. You will then revise the blog post based on the feedback (delegate to `blog_editor`). This process will be repeated until the user is satisfied with the result.
-    6.  **Images:** Once the user is happy with the written content, ask if they'd like to add images (up to 5 total). Images are only ever added one at a time:
-        - Ask the user for the GCS bucket name to use for image uploads (reuse it for the rest of the session unless they say otherwise).
+    4.  **Length:** Before writing, ask the user whether they want a "short" (~{BLOG_LENGTH_WORD_LIMITS["short"]} words), "medium" (~{BLOG_LENGTH_WORD_LIMITS["medium"]} words), or "long" (~{BLOG_LENGTH_WORD_LIMITS["long"]} words) blog post. Call `set_blog_length` with their choice. If they don't specify or don't care, silently proceed with the default ("{DEFAULT_BLOG_LENGTH}") without calling the tool — it is already applied.
+    5.  **Write:** Once the user approves the outline, you will write the blog post. To do this, use the `robust_blog_writer` tool. Be then open for feedback.
+    6.  **Edit:** After the first draft is written, you will present it to the user and ask for feedback. You will then revise the blog post based on the feedback (delegate to `blog_editor`). This process will be repeated until the user is satisfied with the result.
+    7.  **Images:** Once the user is happy with the written content, ask if they'd like to add images (up to 5 total). Images are only ever added one at a time:
         - For each image (max 5), ask the user to describe where in the post it goes and whether it should be:
-          a. **Generated** — ask for a description of the image, then call `generate_blog_image` with that prompt, the bucket name, and a unique `destination_filename` (e.g. "images/<slug>/image-<n>.png").
-          b. **Uploaded** — ask for the local file path, then call `upload_local_image_to_gcs` with that path, the bucket name, and a unique `destination_filename`.
+          a. **Generated** — ask for a description of the image, then call `generate_blog_image` with that prompt and a unique `destination_filename` (e.g. "images/<slug>/image-<n>.png").
+          b. **Uploaded** — ask for the local file path, then call `upload_local_image_to_gcs` with that path and a unique `destination_filename`.
         - After each successful call, insert a Markdown image tag (`![alt text](image_url)`) at the location the user specified by delegating to `blog_editor` with feedback describing exactly where to insert the returned `image_url`.
         - Stop after 5 images or as soon as the user says they're done, whichever comes first.
         - If the user doesn't want images, skip this step entirely.
-    7.  **Social Media:** After the user approves the blog post, you will ask if they want to generate social media posts to promote the article. If the user agrees to create a social media post, use the `social_media_writer` tool.
-    8.  **Export:** When the user approves the final version, ask for the GCS bucket name (reuse the one from the Images step if applicable) and the destination filename (object path), then use the `save_blog_post_to_gcs` tool. Saving only happens to Google Cloud Storage — there is no local-file export option.
+    8.  **Export:** When the user approves the final version, save it automatically with the `save_blog_post_to_gcs` tool — never ask the user for a filename or path. Derive a filename yourself from the post's title (lowercase, hyphenated slug, e.g. "my-great-post.md") and pass just that as `filename`; the tool always stores it under the "{DEFAULT_BLOG_DRAFTS_PATH}/" path automatically. Saving only happens to Google Cloud Storage — there is no local-file export option. After saving, tell the user the resulting `gcs_uri`.
+
+    Storage: all GCS operations (saving the post, generating/uploading images) default to the "{DEFAULT_GCS_BUCKET}" bucket automatically — never ask the user for a bucket name. Only use a different bucket if the user explicitly names one. Blog posts always go under "{DEFAULT_BLOG_DRAFTS_PATH}/" (handled by the tool); images are unaffected by this and keep using the `destination_filename` you choose per image.
 
     Current date: {datetime.datetime.now().strftime("%Y-%m-%d")}
     """,
@@ -63,14 +83,15 @@ interactive_blogger_agent = Agent(
         robust_blog_writer,
         robust_blog_planner,
         blog_editor,
-        social_media_writer,
     ],
     tools=[
         FunctionTool(save_blog_post_to_gcs),
-        FunctionTool(analyze_codebase),
         FunctionTool(generate_blog_image),
         FunctionTool(upload_local_image_to_gcs),
+        FunctionTool(set_blog_length),
+        github_mcp_toolset,
     ],
+    before_agent_callback=init_blog_length_defaults,
     output_key="blog_outline",
 )
 

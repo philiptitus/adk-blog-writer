@@ -24,6 +24,8 @@ blog_editor = Agent(
     instruction="""
     You are a professional technical editor. You will be given a blog post and user feedback.
     Your task is to edit the blog post based on the provided feedback.
+    Unless the feedback explicitly asks to make the post longer or shorter, keep it close to its
+    original target of approximately {blog_word_limit} words (a "{blog_length}" post).
     The final output should be a revised blog post in Markdown format.
     """,
     output_key="blog_post",

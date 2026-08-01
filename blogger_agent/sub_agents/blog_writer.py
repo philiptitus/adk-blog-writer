@@ -32,6 +32,7 @@ blog_writer = Agent(
     - Use code snippets extensively to illustrate your points.
     - Use Google Search to find relevant information and examples to support your writing.
     - The codebase context will be available in the `codebase_context` state key.
+    - Target length: the user requested a "{blog_length}" post, which should be approximately {blog_word_limit} words. Stay close to this target — do not pad with filler to reach it, and do not cut content short well before it.
     The final output must be a complete blog post in Markdown format. Do not wrap the output in a code block.
     """,
     tools=[google_search],

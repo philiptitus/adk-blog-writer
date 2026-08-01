@@ -45,3 +45,33 @@ class ResearchConfiguration:
 
 
 config = ResearchConfiguration()
+
+
+# --- Blog length settings ---
+# Edit these numbers to change how many words each length option targets.
+# "medium" is used automatically whenever the user doesn't specify a length.
+BLOG_LENGTH_WORD_LIMITS: dict[str, int] = {
+    "short": 600,
+    "medium": 1200,
+    "long": 2000,
+}
+DEFAULT_BLOG_LENGTH: str = "medium"
+
+
+# --- Storage settings ---
+# Default GCS bucket used for saving blog posts and images. Edit this to
+# point at a different bucket; the agent will use it automatically without
+# asking, unless the user explicitly requests a different bucket.
+DEFAULT_GCS_BUCKET: str = "blogs-dev"
+
+# Path (object prefix) within the bucket where finished blog posts are saved.
+# Edit this to change where posts land; the agent never asks the user for a
+# path, it always saves under this prefix.
+DEFAULT_BLOG_DRAFTS_PATH: str = "drafts"
+
+
+# --- GitHub MCP settings ---
+# Remote GitHub MCP server used for codebase-aware blog posts. Requires a
+# GITHUB_PERSONAL_ACCESS_TOKEN env var (a public-repo-read-only token is
+# enough). See https://github.com/github/github-mcp-server for details.
+GITHUB_MCP_SERVER_URL: str = "https://api.githubcopilot.com/mcp/"
