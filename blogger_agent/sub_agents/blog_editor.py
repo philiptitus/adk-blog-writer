@@ -14,7 +14,6 @@
 
 from google.adk.agents import Agent
 
-from ..agent_utils import suppress_output_callback
 from ..config import config
 
 blog_editor = Agent(
@@ -29,5 +28,4 @@ blog_editor = Agent(
     The final output should be a revised blog post in Markdown format.
     """,
     output_key="blog_post",
-    after_agent_callback=suppress_output_callback,
 )

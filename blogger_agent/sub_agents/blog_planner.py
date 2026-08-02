@@ -15,7 +15,6 @@
 from google.adk.agents import Agent, LoopAgent
 from google.adk.tools import google_search
 
-from ..agent_utils import suppress_output_callback
 from ..config import config
 from ..validation_checkers import OutlineValidationChecker
 
@@ -35,7 +34,6 @@ blog_planner = Agent(
     """,
     tools=[google_search],
     output_key="blog_outline",
-    after_agent_callback=suppress_output_callback,
 )
 
 robust_blog_planner = LoopAgent(
@@ -46,5 +44,4 @@ robust_blog_planner = LoopAgent(
         OutlineValidationChecker(name="outline_validation_checker"),
     ],
     max_iterations=3,
-    after_agent_callback=suppress_output_callback,
 )

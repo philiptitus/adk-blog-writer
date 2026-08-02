@@ -16,7 +16,7 @@ import datetime
 import os
 
 from google.adk.agents import Agent
-from google.adk.tools import FunctionTool
+from google.adk.tools import AgentTool, FunctionTool
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 
@@ -66,12 +66,12 @@ interactive_blogger_agent = Agent(
     3.  **Refine:** The user can provide feedback to refine the outline. You will continue to refine the outline until it is approved by the user.
     4.  **Length:** Before writing, ask the user whether they want a "short" (~{BLOG_LENGTH_WORD_LIMITS["short"]} words), "medium" (~{BLOG_LENGTH_WORD_LIMITS["medium"]} words), or "long" (~{BLOG_LENGTH_WORD_LIMITS["long"]} words) blog post. Call `set_blog_length` with their choice. If they don't specify or don't care, silently proceed with the default ("{DEFAULT_BLOG_LENGTH}") without calling the tool — it is already applied.
     5.  **Write:** Once the user approves the outline, you will write the blog post. To do this, use the `robust_blog_writer` tool. Be then open for feedback.
-    6.  **Edit:** After the first draft is written, you will present it to the user and ask for feedback. You will then revise the blog post based on the feedback (delegate to `blog_editor`). This process will be repeated until the user is satisfied with the result.
+    6.  **Edit:** After the first draft is written, you will present it to the user and ask for feedback. You will then revise the blog post based on the feedback by calling the `blog_editor` tool. This process will be repeated until the user is satisfied with the result.
     7.  **Images:** Once the user is happy with the written content, ask if they'd like to add images (up to 5 total). Images are only ever added one at a time:
         - For each image (max 5), ask the user to describe where in the post it goes and whether it should be:
           a. **Generated** — ask for a description of the image, then call `generate_blog_image` with that prompt and a unique `destination_filename` (e.g. "images/<slug>/image-<n>.png").
           b. **Found online** (e.g. a company logo, a known person/place) — call `search_public_images` with a short query, show the user the returned results (title + source_page) to pick from, then call `mirror_public_image_to_gcs` with the chosen `image_url` and a unique `destination_filename` to make a permanent copy. Never invent or guess an image URL yourself — only use URLs returned by `search_public_images`.
-        - After each successful call, insert a Markdown image tag (`![alt text](image_url)`) at the location the user specified by delegating to `blog_editor` with feedback describing exactly where to insert the returned `image_url`.
+        - After each successful call, insert a Markdown image tag (`![alt text](image_url)`) at the location the user specified by calling the `blog_editor` tool with feedback describing exactly where to insert the returned `image_url`.
         - Stop after 5 images or as soon as the user says they're done, whichever comes first.
         - If the user doesn't want images, skip this step entirely.
     8.  **Export:** When the user approves the final version, save it automatically with the `save_blog_post_to_gcs` tool — never ask the user for a filename or path. Derive a filename yourself from the post's title (lowercase, hyphenated slug, e.g. "my-great-post.md") and pass just that as `filename`; the tool always stores it under the "{DEFAULT_BLOG_DRAFTS_PATH}/" path automatically. Saving only happens to Google Cloud Storage — there is no local-file export option. After saving, tell the user the resulting `gcs_uri`.
@@ -80,12 +80,10 @@ interactive_blogger_agent = Agent(
 
     Current date: {datetime.datetime.now().strftime("%Y-%m-%d")}
     """,
-    sub_agents=[
-        robust_blog_writer,
-        robust_blog_planner,
-        blog_editor,
-    ],
     tools=[
+        AgentTool(robust_blog_planner),
+        AgentTool(robust_blog_writer),
+        AgentTool(blog_editor),
         FunctionTool(save_blog_post_to_gcs),
         FunctionTool(generate_blog_image),
         FunctionTool(search_public_images),

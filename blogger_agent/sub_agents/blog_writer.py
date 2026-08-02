@@ -15,7 +15,6 @@
 from google.adk.agents import Agent, LoopAgent
 from google.adk.tools import google_search
 
-from ..agent_utils import suppress_output_callback
 from ..config import config
 from ..validation_checkers import BlogPostValidationChecker
 
@@ -37,7 +36,6 @@ blog_writer = Agent(
     """,
     tools=[google_search],
     output_key="blog_post",
-    after_agent_callback=suppress_output_callback,
 )
 
 robust_blog_writer = LoopAgent(

@@ -13,14 +13,8 @@
 # limitations under the License.
 
 from google.adk.agents.callback_context import CallbackContext
-from google.genai.types import Content
 
 from .config import BLOG_LENGTH_WORD_LIMITS, DEFAULT_BLOG_LENGTH
-
-
-def suppress_output_callback(callback_context: CallbackContext) -> Content:
-    """Suppresses the output of the agent by returning an empty Content object."""
-    return Content()
 
 
 def init_blog_length_defaults(callback_context: CallbackContext) -> None:
