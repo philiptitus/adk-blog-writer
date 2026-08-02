@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import io
+import logging
 import os
 from urllib.parse import urlparse
 
@@ -32,6 +33,8 @@ from .config import (
     config,
 )
 
+logger = logging.getLogger(__name__)
+
 _MAX_IMAGE_DOWNLOAD_BYTES = 15_000_000  # 15 MB safety cap for mirrored images
 
 
@@ -46,9 +49,21 @@ def _resize_if_too_wide(image_bytes: bytes, max_width: int = MAX_IMAGE_WIDTH_PX)
         image = Image.open(io.BytesIO(image_bytes))
         image.load()
     except Exception:
+        logger.warning(
+            "resize_if_too_wide: could not decode image (%d bytes) with Pillow, "
+            "uploading unresized",
+            len(image_bytes),
+            exc_info=True,
+        )
         return image_bytes
 
     if image.width <= max_width:
+        logger.info(
+            "resize_if_too_wide: %dx%d already <= max width %d, no resize needed",
+            image.width,
+            image.height,
+            max_width,
+        )
         return image_bytes
 
     new_height = round(image.height * (max_width / image.width))
@@ -56,7 +71,17 @@ def _resize_if_too_wide(image_bytes: bytes, max_width: int = MAX_IMAGE_WIDTH_PX)
 
     buffer = io.BytesIO()
     resized.save(buffer, format=image.format or "PNG")
-    return buffer.getvalue()
+    resized_bytes = buffer.getvalue()
+    logger.info(
+        "resize_if_too_wide: resized %dx%d -> %dx%d (%d bytes -> %d bytes)",
+        image.width,
+        image.height,
+        max_width,
+        new_height,
+        len(image_bytes),
+        len(resized_bytes),
+    )
+    return resized_bytes
 
 
 def set_blog_length(length: str, tool_context: ToolContext) -> dict:
