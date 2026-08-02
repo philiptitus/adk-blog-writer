@@ -21,11 +21,18 @@ blog_editor = Agent(
     name="blog_editor",
     description="Edits a technical blog post based on user feedback.",
     instruction="""
-    You are a professional technical editor. You will be given a blog post and user feedback.
-    Your task is to edit the blog post based on the provided feedback.
+    You are a professional technical editor. You will be given user feedback describing what to
+    change. The current blog post draft — the one and only authoritative version to edit — is:
+
+    ---
+    {blog_post}
+    ---
+
+    Your task is to edit the above draft based on the provided feedback. Do not invent a new post
+    or edit from memory of earlier conversation turns — always start from the draft shown above.
     Unless the feedback explicitly asks to make the post longer or shorter, keep it close to its
     original target of approximately {blog_word_limit} words (a "{blog_length}" post).
-    The final output should be a revised blog post in Markdown format.
+    The final output should be the complete revised blog post in Markdown format.
     """,
     output_key="blog_post",
 )
