@@ -1,0 +1,84 @@
+name: Terraform CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+env:
+  PROJECT_ID: fiona-464509
+  REGION: us-central1
+  REPO: blogger-agent
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            REF="${{ github.base_ref }}"
+          else
+            REF="${{ github.ref_name }}"
+          fi
+          if [ "$REF" = "main" ]; then
+            echo "name=prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform init
+
+      - name: Terraform workspace select
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform workspace select ${{ steps.env.outputs.name }} || terraform workspace new ${{ steps.env.outputs.name }}
+
+      - name: Terraform plan
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform plan -var-file=terraform.tfvars -var-file=${{ steps.env.outputs.name }}.tfvars
+
+      - name: Terraform apply (baseline infra)
+        if: github.event_name == 'push'
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform apply -auto-approve -var-file=terraform.tfvars -var-file=${{ steps.env.outputs.name }}.tfvars
+
+      - name: Auth to Google Cloud
+        if: github.event_name == 'push'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Set up gcloud
+        if: github.event_name == 'push'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        if: github.event_name == 'push'
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        if: github.event_name == 'push'
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/blogger-agent:${{ steps.env.outputs.name }}-${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Terraform apply (deploy image)
+        if: github.event_name == 'push'
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform apply -auto-approve -var-file=terraform.tfvars -var-file=${{ steps.env.outputs.name }}.tfvars -var="image=${{ env.IMAGE }}"

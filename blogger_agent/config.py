@@ -62,7 +62,9 @@ DEFAULT_BLOG_LENGTH: str = "medium"
 # Default GCS bucket used for saving blog posts and images. Edit this to
 # point at a different bucket; the agent will use it automatically without
 # asking, unless the user explicitly requests a different bucket.
-DEFAULT_GCS_BUCKET: str = "blogs-dev"
+# On Cloud Run, Terraform injects BLOGGER_GCS_BUCKET (blogs-dev/blogs-prod);
+# local dev with no env var set keeps today's exact behavior.
+DEFAULT_GCS_BUCKET: str = os.environ.get("BLOGGER_GCS_BUCKET", "blogs-dev")
 
 # Path (object prefix) within the bucket where finished blog posts are saved.
 # Edit this to change where posts land; the agent never asks the user for a

@@ -4,7 +4,7 @@ This directory contains the evaluation framework for the `blogger-agent`.
 
 ## How to Run
 
-To run the evaluations, you first need to install the required dependencies by running `uv pip install -r requirements.txt` from the root of the project.
+To run the evaluations, you first need to install the required dependencies by running `uv sync` from the root of the project.
 
 Once the dependencies are installed, you can run the evaluation using `uv run pytest` from the root of the project:
 
