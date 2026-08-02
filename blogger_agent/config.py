@@ -84,3 +84,11 @@ GITHUB_MCP_SERVER_URL: str = "https://api.githubcopilot.com/mcp/"
 IMAGE_SEARCH_RESULT_COUNT: int = 3
 # SerpApi's "safe" param: "active" or "off".
 IMAGE_SEARCH_SAFESEARCH: str = "active"
+
+
+# --- Blog image sizing ---
+# Every image (generated or mirrored from a search result) is downscaled to
+# this max width before upload, preserving aspect ratio — markdown has no
+# way to express a display width itself, so this is done to the file.
+# Edit this number to change the default width for all blog images.
+MAX_IMAGE_WIDTH_PX: int = 1200

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import os
 from urllib.parse import urlparse
 
@@ -19,6 +20,7 @@ import requests
 from google import genai
 from google.adk.tools import ToolContext
 from google.cloud import storage
+from PIL import Image
 
 from .config import (
     BLOG_LENGTH_WORD_LIMITS,
@@ -26,10 +28,35 @@ from .config import (
     DEFAULT_GCS_BUCKET,
     IMAGE_SEARCH_RESULT_COUNT,
     IMAGE_SEARCH_SAFESEARCH,
+    MAX_IMAGE_WIDTH_PX,
     config,
 )
 
 _MAX_IMAGE_DOWNLOAD_BYTES = 15_000_000  # 15 MB safety cap for mirrored images
+
+
+def _resize_if_too_wide(image_bytes: bytes, max_width: int = MAX_IMAGE_WIDTH_PX) -> bytes:
+    """Downscales an image to max_width (preserving aspect ratio) if wider.
+
+    Markdown has no syntax for display width, so this shrinks the actual
+    file instead. Returns the original bytes unchanged if they aren't a
+    format Pillow can decode, or if the image is already narrow enough.
+    """
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        image.load()
+    except Exception:
+        return image_bytes
+
+    if image.width <= max_width:
+        return image_bytes
+
+    new_height = round(image.height * (max_width / image.width))
+    resized = image.resize((max_width, new_height), Image.LANCZOS)
+
+    buffer = io.BytesIO()
+    resized.save(buffer, format=image.format or "PNG")
+    return buffer.getvalue()
 
 
 def set_blog_length(length: str, tool_context: ToolContext) -> dict:
@@ -108,6 +135,8 @@ def generate_blog_image(
 
     if image_bytes is None:
         return {"status": "error", "error_message": "No image was generated."}
+
+    image_bytes = _resize_if_too_wide(image_bytes)
 
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
@@ -227,7 +256,7 @@ def mirror_public_image_to_gcs(
                 "error_message": "Image exceeds the size limit for mirroring.",
             }
         chunks.append(chunk)
-    image_bytes = b"".join(chunks)
+    image_bytes = _resize_if_too_wide(b"".join(chunks))
 
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
