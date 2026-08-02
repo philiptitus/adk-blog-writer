@@ -2,6 +2,8 @@
 
 This project contains the core logic for the Blogger Agent, a multi-agent system designed to assist users in creating technical blog posts. The agent is built using the Google Agent Development Kit (ADK) and follows a modular architecture.
 
+For deploying this to Cloud Run (Terraform, dev/prod environments, CI/CD), see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Getting Started with uv
 
 This project uses [uv](https://github.com/astral-sh/uv) for dependency management.
@@ -19,10 +21,10 @@ pip install uv
 Once uv is installed, you can install the project's dependencies:
 
 ```bash
-uv pip install -r requirements.txt
+uv sync
 ```
 
-This will create a virtual environment for the project and install all the required libraries.
+This will create a virtual environment for the project and install all the required libraries, pinned exactly as resolved in `uv.lock`.
 
 ### Running the Agent and Tests
 

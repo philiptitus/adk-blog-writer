@@ -1,0 +1,15 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+tests/
+eval/
+tmp_*
+adk_web.png
+agent_explainer.md
+*.tf
+*.tfvars
+.terraform/
+*.tfstate*
+.github/
+shared/

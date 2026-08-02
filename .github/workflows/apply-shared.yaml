@@ -1,0 +1,32 @@
+name: "One-off: Apply shared Artifact Registry"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apply-shared:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./shared
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform init
+
+      - name: Terraform plan
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform plan
+
+      - name: Terraform apply
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: terraform apply -auto-approve
