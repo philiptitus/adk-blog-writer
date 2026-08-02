@@ -91,4 +91,4 @@ IMAGE_SEARCH_SAFESEARCH: str = "active"
 # this max width before upload, preserving aspect ratio — markdown has no
 # way to express a display width itself, so this is done to the file.
 # Edit this number to change the default width for all blog images.
-MAX_IMAGE_WIDTH_PX: int = 1200
+MAX_IMAGE_WIDTH_PX: int = 600
