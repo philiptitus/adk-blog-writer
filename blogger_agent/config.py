@@ -77,15 +77,10 @@ DEFAULT_BLOG_DRAFTS_PATH: str = "drafts"
 GITHUB_MCP_SERVER_URL: str = "https://api.githubcopilot.com/mcp/"
 
 
-# --- Public image search settings ---
+# --- Public image search settings (SerpApi, Google Images engine) ---
 # Used to find existing public images (e.g. "Nike logo") instead of
-# generating one. Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID env vars —
-# see https://programmablesearchengine.google.com/ to create a search engine
-# (with Image Search enabled) and https://console.cloud.google.com/apis/library/customsearch.googleapis.com
-# to enable the Custom Search API and mint an API key.
+# generating one. Requires a SERPAPI_API_KEY env var — free tier (250
+# searches/month, no card required) at https://serpapi.com/.
 IMAGE_SEARCH_RESULT_COUNT: int = 3
-# Google Custom Search "rights" filter — restricts results to images marked
-# as reusable. Combinators are "|" (OR), "." (AND), "-" (NOT) — NOT commas,
-# which the API rejects with a 400 INVALID_ARGUMENT error.
-# Set to "" to disable filtering (not recommended by default).
-IMAGE_SEARCH_RIGHTS_FILTER: str = "cc_publicdomain|cc_attribute|cc_sharealike"
+# SerpApi's "safe" param: "active" or "off".
+IMAGE_SEARCH_SAFESEARCH: str = "active"

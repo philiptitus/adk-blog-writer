@@ -109,7 +109,7 @@ The agents use the following custom tools, defined in `blogger_agent/tools.py`:
 
 *   **`save_blog_post_to_gcs`**: Saves the blog post to a Google Cloud Storage bucket. This is the only supported way to save a post.
 *   **`generate_blog_image`**: Generates an image with Gemini's image model (`gemini-2.5-flash-image`, aka "Nano Banana") and uploads it to a GCS bucket.
-*   **`search_public_images`**: Finds existing public images (e.g. a brand logo) via the Google Custom Search API. Requires `GOOGLE_CSE_API_KEY` and `GOOGLE_CSE_ID` env vars.
+*   **`search_public_images`**: Finds existing public images (e.g. a brand logo) via SerpApi's Google Images engine. Requires a `SERPAPI_API_KEY` env var.
 *   **`mirror_public_image_to_gcs`**: Downloads a URL returned by `search_public_images` and stores a permanent copy in GCS.
 *   **`set_blog_length`**: Records the user's chosen post length (short/medium/long) for the session.
 

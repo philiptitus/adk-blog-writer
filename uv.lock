@@ -254,6 +254,7 @@ dependencies = [
     { name = "google-genai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "requests" },
 ]
 
 [package.optional-dependencies]
@@ -287,6 +288,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'lint'", specifier = "~=1.19.0" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "requests", specifier = ">=2.32.0" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.4.6" },
     { name = "types-pyyaml", marker = "extra == 'lint'", specifier = "~=6.0.12.20240917" },
     { name = "types-requests", marker = "extra == 'lint'", specifier = "~=2.32.4.20250913" },

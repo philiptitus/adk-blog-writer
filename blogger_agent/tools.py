@@ -25,7 +25,7 @@ from .config import (
     DEFAULT_BLOG_DRAFTS_PATH,
     DEFAULT_GCS_BUCKET,
     IMAGE_SEARCH_RESULT_COUNT,
-    IMAGE_SEARCH_RIGHTS_FILTER,
+    IMAGE_SEARCH_SAFESEARCH,
     config,
 )
 
@@ -127,30 +127,25 @@ def search_public_images(query: str) -> dict:
     Args:
         query: What to search for, e.g. "Nike logo" or "Golden Gate Bridge".
     """
-    api_key = os.environ.get("GOOGLE_CSE_API_KEY")
-    cse_id = os.environ.get("GOOGLE_CSE_ID")
-    if not api_key or not cse_id:
+    api_key = os.environ.get("SERPAPI_API_KEY")
+    if not api_key:
         return {
             "status": "error",
             "error_message": (
                 "Public image search is not configured: set the "
-                "GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID environment variables."
+                "SERPAPI_API_KEY environment variable."
             ),
         }
 
-    params = {
-        "key": api_key,
-        "cx": cse_id,
-        "q": query,
-        "searchType": "image",
-        "num": IMAGE_SEARCH_RESULT_COUNT,
-        "safe": "active",
-    }
-    if IMAGE_SEARCH_RIGHTS_FILTER:
-        params["rights"] = IMAGE_SEARCH_RIGHTS_FILTER
-
     response = requests.get(
-        "https://www.googleapis.com/customsearch/v1", params=params, timeout=10
+        "https://serpapi.com/search",
+        params={
+            "engine": "google_images",
+            "q": query,
+            "api_key": api_key,
+            "safe": IMAGE_SEARCH_SAFESEARCH,
+        },
+        timeout=10,
     )
     if response.status_code != 200:
         return {
@@ -158,23 +153,22 @@ def search_public_images(query: str) -> dict:
             "error_message": f"Image search failed: {response.text[:300]}",
         }
 
-    items = response.json().get("items", [])
-    if not items:
+    results = response.json().get("images_results", [])[:IMAGE_SEARCH_RESULT_COUNT]
+    if not results:
         return {
             "status": "error",
-            "error_message": f"No reusable public images found for '{query}'.",
+            "error_message": f"No public images found for '{query}'.",
         }
 
     return {
         "status": "success",
         "results": [
             {
-                "image_url": item.get("link"),
+                "image_url": item.get("original"),
                 "title": item.get("title"),
-                "source_page": item.get("image", {}).get("contextLink"),
-                "mime_type": item.get("mime"),
+                "source_page": item.get("link"),
             }
-            for item in items
+            for item in results
         ],
     }
 
