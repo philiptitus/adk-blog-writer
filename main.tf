@@ -136,6 +136,14 @@ resource "google_cloud_run_v2_service" "app" {
         value = google_storage_bucket.blog_posts.name
       }
       env {
+        name  = "BLOG_PUBLISH_URL"
+        value = var.blog_publish_url
+      }
+      env {
+        name  = "BLOG_TOKEN_AUDIENCE"
+        value = var.blog_token_audience
+      }
+      env {
         name = "GITHUB_PERSONAL_ACCESS_TOKEN"
         value_source {
           secret_key_ref {

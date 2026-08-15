@@ -20,6 +20,18 @@ variable "image" {
   default     = "us-docker.pkg.dev/cloudrun/container/hello:latest"
 }
 
+variable "blog_publish_url" {
+  type        = string
+  description = "Full URL of the portfolio backend's agent blog-publish endpoint for this environment."
+  default     = ""
+}
+
+variable "blog_token_audience" {
+  type        = string
+  description = "Audience string the backend expects on this environment's OIDC token."
+  default     = ""
+}
+
 variable "environment" {
   type        = string
   description = "Deployment environment. Must be \"dev\" or \"prod\" — selects the Terraform workspace and scopes every resource name."

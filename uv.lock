@@ -249,9 +249,11 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "google-adk", extra = ["mcp"] },
+    { name = "google-auth" },
     { name = "google-cloud-aiplatform", extra = ["adk", "agent-engines"] },
     { name = "google-cloud-storage" },
     { name = "google-genai" },
+    { name = "markdown" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -283,9 +285,11 @@ dev = [
 requires-dist = [
     { name = "codespell", marker = "extra == 'lint'", specifier = "~=2.4.1" },
     { name = "google-adk", extras = ["mcp"], specifier = ">=1.31.0" },
+    { name = "google-auth", specifier = ">=2.35.0" },
     { name = "google-cloud-aiplatform", extras = ["adk", "agent-engines"], specifier = ">=1.117.0" },
     { name = "google-cloud-storage", specifier = ">=2.18.0" },
     { name = "google-genai", specifier = ">=1.9.0" },
+    { name = "markdown", specifier = ">=3.7" },
     { name = "mypy", marker = "extra == 'lint'", specifier = "~=1.19.0" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "pydantic", specifier = ">=2.10.6" },
@@ -1440,6 +1444,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dd/e9/8941b7e72a187000561d932c0f2f2ed2b0fd080dfc33ba6e05961d45ca7d/litellm-1.84.0.tar.gz", hash = "sha256:b8ad0cbea11a5941b18d5af973017a340abd3d3ab41cb86e5401b970626d71a6", size = 15103206, upload-time = "2026-05-14T05:45:53.017Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/01/a6/77fa1bbf5e42eb596b06318b3f7e6af5d0f44028046d1d598c6a595d028f/litellm-1.84.0-py3-none-any.whl", hash = "sha256:2a58d6041e6aa27d1a28dc8d8828ab500fef1a00ef74ca65e60899035010c2f2", size = 16735062, upload-time = "2026-05-14T05:45:49.927Z" },
+]
+
+[[package]]
+name = "markdown"
+version = "3.10.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/6f/da4c6aea59b3001f2e8c0ec7497475aadaf3b021c10cab5b2858f0f32b26/markdown-3.10.3.tar.gz", hash = "sha256:3589362618f743188b4d955b874402bc814f4f83f544dc207719f4baa7d9c45f", size = 372596, upload-time = "2026-07-30T19:05:29.005Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/69/4a5af2bc115a9a33fefe51709749de8262be3f9ba063d1753a837cdbc49c/markdown-3.10.3-py3-none-any.whl", hash = "sha256:fa6c92a00a4a3c98b22728c64a935ae1928250ae65058a6ded814d2cc29a4cea", size = 110757, upload-time = "2026-07-30T19:05:27.883Z" },
 ]
 
 [[package]]

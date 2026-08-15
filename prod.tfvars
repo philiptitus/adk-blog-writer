@@ -1,1 +1,4 @@
 environment = "prod"
+
+blog_publish_url    = "https://portfolio-yfdoo3vmfq-ew.a.run.app/api/agent/blogs/"
+blog_token_audience = "portfolio-backend-agent-prod"

@@ -17,6 +17,9 @@ import logging
 import os
 from urllib.parse import urlparse
 
+import google.auth.transport.requests
+import google.oauth2.id_token
+import markdown as md
 import requests
 from google import genai
 from google.adk.tools import ToolContext
@@ -36,6 +39,16 @@ from .config import (
 logger = logging.getLogger(__name__)
 
 _MAX_IMAGE_DOWNLOAD_BYTES = 15_000_000  # 15 MB safety cap for mirrored images
+
+_BLOG_CATEGORIES = (
+    "DATA SCIENCE.AI AND ML",
+    "WEB DEVELOPMENT",
+    "MOBILE DEVELOPMENT",
+    "CYBERSECURITY",
+    "CLOUD COMPUTING",
+    "GAME DEVELOPMENT",
+    "OTHER",
+)
 
 
 def _resize_if_too_wide(image_bytes: bytes, max_width: int = MAX_IMAGE_WIDTH_PX) -> bytes:
@@ -292,3 +305,76 @@ def mirror_public_image_to_gcs(
         "gcs_uri": f"gs://{bucket_name}/{destination_filename}",
         "image_url": blob.public_url,
     }
+
+
+def publish_blog_post(
+    title: str,
+    description: str,
+    body_markdown: str,
+    category: str,
+    image_url: str = "",
+    png_url: str = "",
+    author: str = "AI Agent",
+) -> dict:
+    """Publishes a finished blog post live on the portfolio website.
+
+    Only call this after the user has approved the final edited post — it
+    makes the post publicly visible immediately. Use save_blog_post_to_gcs
+    instead if the user just wants a draft saved, not published.
+
+    Args:
+        title: The post's title/headline.
+        description: A one-to-two sentence summary shown as a preview.
+            Keep it under 500 characters — longer text is truncated.
+        body_markdown: The full post body in Markdown, same content you'd
+            pass to save_blog_post_to_gcs. This function converts it to
+            HTML before sending, since the website renders it as raw HTML,
+            not Markdown.
+        category: Must be exactly one of: "DATA SCIENCE.AI AND ML",
+            "WEB DEVELOPMENT", "MOBILE DEVELOPMENT", "CYBERSECURITY",
+            "CLOUD COMPUTING", "GAME DEVELOPMENT", "OTHER". Any other value
+            is rejected by the website.
+        image_url: Public URL of the featured/cover image, if one was
+            generated or found for this post (e.g. via generate_blog_image
+            or search_public_images). Leave empty if there isn't one.
+        png_url: Public URL of a secondary supplementary image, if any.
+        author: Byline shown on the post. Defaults to "AI Agent".
+    """
+    publish_url = os.environ.get("BLOG_PUBLISH_URL")
+    audience = os.environ.get("BLOG_TOKEN_AUDIENCE")
+    if not publish_url or not audience:
+        return {
+            "status": "error",
+            "message": "BLOG_PUBLISH_URL/BLOG_TOKEN_AUDIENCE are not configured on this deployment.",
+        }
+    if category not in _BLOG_CATEGORIES:
+        return {
+            "status": "error",
+            "message": f"category must be one of {_BLOG_CATEGORIES}, got {category!r}.",
+        }
+
+    auth_req = google.auth.transport.requests.Request()
+    token = google.oauth2.id_token.fetch_id_token(auth_req, audience)
+
+    body_html = md.markdown(body_markdown, extensions=["fenced_code", "tables"])
+
+    resp = requests.post(
+        publish_url,
+        json={
+            "name": title,
+            "description": description[:500],
+            "body": body_html,
+            "category": category,
+            "image_url": image_url,
+            "png_url": png_url,
+            "author": author,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30,
+    )
+
+    if resp.status_code == 201:
+        data = resp.json()
+        slug = data.get("slug", "")
+        return {"status": "success", "slug": slug, "url": f"https://filipio.com/blog/{slug}"}
+    return {"status": "error", "message": f"{resp.status_code}: {resp.text}"}

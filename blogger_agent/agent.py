@@ -36,6 +36,7 @@ from .sub_agents import (
 from .tools import (
     generate_blog_image,
     mirror_public_image_to_gcs,
+    publish_blog_post,
     save_blog_post_to_gcs,
     search_public_images,
     set_blog_length,
@@ -73,7 +74,9 @@ interactive_blogger_agent = Agent(
         - After each successful call, insert a Markdown image tag (`![alt text](image_url)`) at the location the user specified by calling the `blog_editor` tool with feedback describing exactly where to insert the returned `image_url`. The uploaded file is already downscaled to a sane width, so plain Markdown is enough in almost all cases. As a fallback only — if the image still looks like it could overflow the page (e.g. an unusually tall image, or the destination renderer is known to ignore image sizing) — instruct `blog_editor` to use an HTML `<img>` tag instead (e.g. `<img src="image_url" alt="alt text" style="max-width: 100%; height: auto;">`), which constrains it responsively without distorting its aspect ratio.
         - Stop after 5 images or as soon as the user says they're done, whichever comes first.
         - If the user doesn't want images, skip this step entirely.
-    8.  **Export:** When the user approves the final version, save it automatically with the `save_blog_post_to_gcs` tool — never ask the user for a filename or path. Derive a filename yourself from the post's title (lowercase, hyphenated slug, e.g. "my-great-post.md") and pass just that as `filename`; the tool always stores it under the "{DEFAULT_BLOG_DRAFTS_PATH}/" path automatically. Saving only happens to Google Cloud Storage — there is no local-file export option. After saving, tell the user the resulting `gcs_uri`.
+    8.  **Export:** When the user approves the final version, ask whether they want to (a) **save a draft** or (b) **publish it live** on the portfolio website:
+        - **Save a draft** — save it automatically with the `save_blog_post_to_gcs` tool, never asking for a filename or path. Derive a filename yourself from the post's title (lowercase, hyphenated slug, e.g. "my-great-post.md") and pass just that as `filename`; the tool always stores it under the "{DEFAULT_BLOG_DRAFTS_PATH}/" path automatically. After saving, tell the user the resulting `gcs_uri`.
+        - **Publish it live** — this makes the post publicly visible immediately, so confirm the user actually wants that before calling `publish_blog_post`. You'll need a `category`: ask the user, or infer one confidently from the post's content — it must be exactly one of the values listed in the tool's docstring, nothing else. Pass the post's title as `title`, a 1-2 sentence summary as `description`, the full Markdown as `body_markdown`, and the featured image's URL (if one was generated/found in step 7) as `image_url`. After publishing, tell the user the resulting `url`.
 
     Storage: all GCS operations (saving the post, generating/mirroring images) default to the "{DEFAULT_GCS_BUCKET}" bucket automatically — never ask the user for a bucket name. Only use a different bucket if the user explicitly names one. Blog posts always go under "{DEFAULT_BLOG_DRAFTS_PATH}/" (handled by the tool); images are unaffected by this and keep using the `destination_filename` you choose per image.
 
@@ -84,6 +87,7 @@ interactive_blogger_agent = Agent(
         AgentTool(robust_blog_writer),
         AgentTool(blog_editor),
         FunctionTool(save_blog_post_to_gcs),
+        FunctionTool(publish_blog_post),
         FunctionTool(generate_blog_image),
         FunctionTool(search_public_images),
         FunctionTool(mirror_public_image_to_gcs),
