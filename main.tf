@@ -171,10 +171,12 @@ resource "google_cloud_run_v2_service" "app" {
   depends_on = [google_project_service.required_apis]
 }
 
-resource "google_cloud_run_v2_service_iam_member" "app_public" {
-  project  = var.project_id
-  location = google_cloud_run_v2_service.app.location
-  name     = google_cloud_run_v2_service.app.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
+# No public invoker binding — access is locked down via Cloud Run's native
+# IAP (enabled out-of-band via `gcloud beta run services update --iap`,
+# same as Google's own official ADK deploy tooling keeps IAP outside
+# Terraform). Unlike the older load-balancer-based IAP, access here is
+# granted via the ordinary Cloud Run invoker role, not a separate IAP
+# resource type — IAP just adds a Google-sign-in front door in front of
+# the normal invoker check:
+#   gcloud run services add-iam-policy-binding <name> --region=<region> \
+#     --member="user:you@example.com" --role="roles/run.invoker"
