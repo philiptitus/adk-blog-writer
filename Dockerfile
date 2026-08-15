@@ -5,9 +5,8 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev
-
 COPY blogger_agent/ ./blogger_agent/
+RUN uv sync --frozen --no-dev
 
 ENV PORT=8080
 EXPOSE 8080
