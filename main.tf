@@ -15,6 +15,7 @@ resource "google_project_service" "required_apis" {
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "storage.googleapis.com",
+    "aiplatform.googleapis.com",
   ])
 
   project            = var.project_id
@@ -46,6 +47,13 @@ resource "google_service_account" "app_sa" {
   project      = var.project_id
   account_id   = local.service_account_id
   display_name = "blogger-agent runtime SA (${var.environment})"
+}
+
+# Lets the runtime SA call Gemini models via Vertex AI (aiplatform.endpoints.predict).
+resource "google_project_iam_member" "app_sa_vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.app_sa.email}"
 }
 
 resource "google_storage_bucket_iam_member" "app_sa_storage" {
