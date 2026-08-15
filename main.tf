@@ -171,12 +171,18 @@ resource "google_cloud_run_v2_service" "app" {
   depends_on = [google_project_service.required_apis]
 }
 
-# No public invoker binding — access is locked down via Cloud Run's native
-# IAP (enabled out-of-band via `gcloud beta run services update --iap`,
-# same as Google's own official ADK deploy tooling keeps IAP outside
-# Terraform). Unlike the older load-balancer-based IAP, access here is
-# granted via the ordinary Cloud Run invoker role, not a separate IAP
-# resource type — IAP just adds a Google-sign-in front door in front of
-# the normal invoker check:
-#   gcloud run services add-iam-policy-binding <name> --region=<region> \
-#     --member="user:you@example.com" --role="roles/run.invoker"
+# Public invoker — real access control lives in front of this, via
+# Cloudflare Access on a custom domain proxied to this service. (Cloud
+# Run's own native IAP was tried first but is unusable: it depends on the
+# IAP OAuth Admin API, which Google permanently shut down 2026-03-19.)
+# The raw *.run.app URL below is still technically reachable directly by
+# anyone who has it — not advertised/indexed anywhere, but not
+# cryptographically gated either. Accepted tradeoff for a much simpler
+# setup than a Cloudflare Tunnel sidecar.
+resource "google_cloud_run_v2_service_iam_member" "app_public" {
+  project  = var.project_id
+  location = google_cloud_run_v2_service.app.location
+  name     = google_cloud_run_v2_service.app.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
