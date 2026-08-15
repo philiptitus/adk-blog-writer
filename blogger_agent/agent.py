@@ -16,8 +16,7 @@ import datetime
 import os
 
 from google.adk.agents import Agent
-from google.adk.tools import AgentTool, FunctionTool
-from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools import AgentTool, FunctionTool, MCPToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 
 from .agent_utils import init_blog_length_defaults
@@ -42,7 +41,7 @@ from .tools import (
     set_blog_length,
 )
 
-github_mcp_toolset = McpToolset(
+github_mcp_toolset = MCPToolset(
     connection_params=StreamableHTTPConnectionParams(
         url=GITHUB_MCP_SERVER_URL,
         headers={
