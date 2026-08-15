@@ -376,5 +376,6 @@ def publish_blog_post(
     if resp.status_code == 201:
         data = resp.json()
         slug = data.get("slug", "")
-        return {"status": "success", "slug": slug, "url": f"https://filipio.com/blog/{slug}"}
+        frontend_base = os.environ.get("BLOG_FRONTEND_BASE_URL") or "https://filipio.com"
+        return {"status": "success", "slug": slug, "url": f"{frontend_base.rstrip('/')}/blog/{slug}"}
     return {"status": "error", "message": f"{resp.status_code}: {resp.text}"}

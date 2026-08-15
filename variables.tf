@@ -32,6 +32,12 @@ variable "blog_token_audience" {
   default     = ""
 }
 
+variable "blog_frontend_base_url" {
+  type        = string
+  description = "Base URL of this environment's portfolio frontend, used to build the published post's public link (e.g. https://filipio.com for prod, a dev frontend URL for dev). Falls back to https://filipio.com in code if unset."
+  default     = ""
+}
+
 variable "environment" {
   type        = string
   description = "Deployment environment. Must be \"dev\" or \"prod\" — selects the Terraform workspace and scopes every resource name."

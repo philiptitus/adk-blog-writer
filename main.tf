@@ -144,6 +144,10 @@ resource "google_cloud_run_v2_service" "app" {
         value = var.blog_token_audience
       }
       env {
+        name  = "BLOG_FRONTEND_BASE_URL"
+        value = var.blog_frontend_base_url
+      }
+      env {
         name = "GITHUB_PERSONAL_ACCESS_TOKEN"
         value_source {
           secret_key_ref {
