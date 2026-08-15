@@ -17,6 +17,8 @@ from google.adk.agents.callback_context import CallbackContext
 from .config import BLOG_LENGTH_WORD_LIMITS, DEFAULT_BLOG_LENGTH
 
 
+
+
 def init_blog_length_defaults(callback_context: CallbackContext) -> None:
     """Seeds a default blog length/word limit if the user hasn't set one yet."""
     if "blog_length" not in callback_context.state:
