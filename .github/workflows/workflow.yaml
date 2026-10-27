@@ -65,6 +65,33 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: terraform workspace select ${{ steps.env.outputs.name }} || terraform workspace new ${{ steps.env.outputs.name }}
 
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Migrate legacy Cloud Run secret environment variables
+        env:
+          GITHUB_PAT: ${{ secrets.BLOGGER_GITHUB_PAT }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          ENVIRONMENT: ${{ steps.env.outputs.name }}
+        run: |
+          SERVICE="blogger-agent-${ENVIRONMENT}"
+          if SERVICE_INFO="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(metadata.name)' 2>&1)"; then
+            gcloud run services update "$SERVICE" \
+              --project "$PROJECT_ID" \
+              --region "$REGION" \
+              --update-env-vars "GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PAT},SERPAPI_API_KEY=${SERPAPI_KEY}"
+          elif [[ "$SERVICE_INFO" == *"not found"* || "$SERVICE_INFO" == *"NOT_FOUND"* ]]; then
+            echo "Cloud Run service does not exist yet; Terraform will create it."
+          else
+            printf '%s\n' "$SERVICE_INFO" >&2
+            exit 1
+          fi
+
       - name: Terraform plan
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
@@ -74,14 +101,6 @@ jobs:
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: terraform apply -auto-approve -var-file=terraform.tfvars -var-file=${{ steps.env.outputs.name }}.tfvars
-
-      - name: Auth to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
-
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
