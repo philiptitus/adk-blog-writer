@@ -7,10 +7,11 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "myze-state"
+    bucket = "myzer-state"
     prefix = "blogger-agent/shared/terraform/state"
   }
 }
+
 
 provider "google" {
   project = var.project_id

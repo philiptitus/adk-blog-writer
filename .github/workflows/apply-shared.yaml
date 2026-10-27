@@ -3,9 +3,14 @@ name: "One-off: Apply shared Artifact Registry"
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   apply-shared:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: prod
     defaults:
       run:
         working-directory: ./shared
