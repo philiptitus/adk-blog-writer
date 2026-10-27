@@ -4,10 +4,10 @@ Infrastructure is managed with Terraform, mirroring the structure of the `Portfo
 
 ## Layout
 
-- `main.tf`, `variables.tf`, `providers.tf`, `dev.tfvars`, `prod.tfvars`, `terraform.tfvars` — per-environment resources (GCS bucket, service account, Secret Manager containers, Cloud Run service), selected via `terraform workspace select dev|prod`.
+- `main.tf`, `variables.tf`, `providers.tf`, `dev.tfvars`, `prod.tfvars`, `terraform.tfvars` — per-environment resources (GCS bucket, service account, Cloud Run service), selected via `terraform workspace select dev|prod`.
 - `shared/` — a separate, non-workspaced Terraform root holding only the Artifact Registry repository. Applied once, manually, before the first real deploy — kept separate so destroying one environment's workspace can never take out infrastructure the other environment depends on.
 - `Dockerfile` — single-stage, `uv`-based build, serves the agent via `adk api_server`.
-- `.github/workflows/workflow.yaml` — main CI/CD: plan on every push/PR, apply + build + deploy on push to `main` (prod) or `develop` (dev).
+- `.github/workflows/workflow.yaml` — PR validation without deployment credentials; plan/apply + build/deploy on trusted pushes to `main` (prod) or `develop` (dev).
 - `.github/workflows/destroy.yaml` — manual, environment-scoped teardown with a typed confirmation.
 - `.github/workflows/apply-shared.yaml` — manual, one-off: applies `shared/`.
 
@@ -15,25 +15,25 @@ Infrastructure is managed with Terraform, mirroring the structure of the `Portfo
 
 | Env var | Source | Purpose |
 |---|---|---|
-| `GOOGLE_CLOUD_PROJECT` | Terraform (plain env var) | Vertex AI project |
-| `GOOGLE_GENAI_USE_VERTEXAI` | Terraform (plain env var) | Use Vertex backend for Gemini |
-| `BLOGGER_GCS_BUCKET` | Terraform (plain env var, from the provisioned bucket) | Overrides the default `blogs-dev` bucket per environment |
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | Cloud Run native Secret Manager mount (`secret_key_ref`) | GitHub MCP server auth (optional — degrades softly if missing) |
-| `SERPAPI_API_KEY` | Cloud Run native Secret Manager mount (`secret_key_ref`) | SerpApi image search (optional — degrades softly if missing) |
+| `GOOGLE_CLOUD_PROJECT` | GitHub Actions deploy workflow | Vertex AI project |
+| `GOOGLE_GENAI_USE_VERTEXAI` | GitHub Actions deploy workflow | Use Vertex backend for Gemini |
+| `BLOGGER_GCS_BUCKET` | GitHub Actions deploy workflow | Selects the provisioned bucket for the environment |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub Actions environment secret, copied to Cloud Run during deploy | GitHub MCP server auth (optional — degrades softly if missing) |
+| `SERPAPI_API_KEY` | GitHub Actions environment secret, copied to Cloud Run during deploy | SerpApi image search (optional — degrades softly if missing) |
 
-Secrets are Terraform-created as **empty containers only** (`google_secret_manager_secret`, no version) — values are added manually, once per environment:
+Before deploying, create GitHub Actions environments named `dev` and `prod`. Add `BLOGGER_GITHUB_PAT` and `SERPAPI_API_KEY` as secrets in each environment; `BLOGGER_GITHUB_PAT` is passed to the app as `GITHUB_PERSONAL_ACCESS_TOKEN`. Use the corresponding runtime keys for each environment. Keep `GOOGLE_CREDENTIALS` in its existing GitHub repository-secret location; the workflows continue using that same secret for Google Cloud deployment authentication. Configure `dev` to allow deployments from `develop` and `main` (the destroy workflow runs from `main`); configure `prod` to allow deployments from `main`. Require reviewer approval for `prod` where the repository's GitHub plan supports it. Protect both branches against unreviewed changes, especially changes to workflow files.
 
-```bash
-gcloud secrets versions add github-personal-access-token-dev --data-file=- <<< "$GITHUB_PAT"
-gcloud secrets versions add serpapi-api-key-dev --data-file=- <<< "$SERPAPI_KEY"
-# repeat with -prod suffix for prod
-```
+The pull-request job only runs Terraform formatting and validation with the backend disabled; it does not receive deployment credentials. The deploy job runs only for pushes to `main` or `develop`, and GitHub's environment gate controls when it can access the environment secrets. The manual shared-infrastructure and destroy workflows also use these protected environments and must be dispatched from `main`.
 
-**Bootstrapping order matters on a brand-new environment**: Cloud Run's native secret mounting means a revision referencing a secret with zero versions will fail to deploy. On the very first apply for a new environment, apply everything except the Cloud Run service first (`-target=...`), populate the secrets, then run a full apply.
+**Security trade-off:** GitHub Actions does not provide secrets directly to a running Cloud Run service. This workflow copies the values into ordinary Cloud Run environment variables, so they are not stored in Terraform state or intentionally printed in workflow logs, but they are visible to principals with permission to inspect Cloud Run service/revision configuration. Restrict Cloud Run read/update IAM permissions accordingly. This does not provide the same runtime secret isolation as Secret Manager. The Cloud Run service is publicly invokable, but callers cannot read its environment variables merely by invoking it. The deployment workflow also still uses the `GOOGLE_CREDENTIALS` service-account key; limit that identity to deployment permissions and consider replacing the key with GitHub OIDC/Workload Identity Federation.
+
+Terraform ignores changes to Cloud Run container environment variables because the deployment workflow owns that configuration. The workflow sets the complete environment variable list on each deployment. To change one of these variables, update this workflow or its environment configuration; Terraform alone will not apply the change.
+
+**Migration from Secret Manager:** Add the existing values to the matching GitHub environment secrets before deploying this change. The next Terraform apply removes the Terraform-managed Secret Manager containers and access grants. After the new revision is deployed, rotate the credentials if the old values may have been exposed. Old Cloud Run revisions can retain their prior environment-variable values, so restrict revision inspection and remove old revisions when they are no longer needed.
 
 ## Deploying
 
-Push to `develop` for a dev deploy, `main` for prod — CI handles plan → apply (baseline) → build/push image → apply (deploy image) automatically. Before the very first deploy ever, run the **"One-off: Apply shared Artifact Registry"** workflow manually once.
+Push to `develop` for a dev deploy, `main` for prod — CI validates pull requests without deployment credentials, then handles plan → apply (baseline) → configure Cloud Run environment → build/push image → apply (deploy image) on trusted pushes. The environment is configured before the new image is deployed so the application revision starts with its required configuration. Before the very first deploy ever, run the **"One-off: Apply shared Artifact Registry"** workflow manually once.
 
 ## Destroying
 

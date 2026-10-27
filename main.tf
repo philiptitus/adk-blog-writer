@@ -6,14 +6,11 @@ locals {
   gcs_bucket_name        = "${var.gcs_bucket_base}-${var.environment}"
   cloud_run_service_name = "${local.app_name}-${var.environment}"
   service_account_id     = "${local.app_name}-sa-${var.environment}"
-  github_pat_secret_name = "github-personal-access-token-${var.environment}"
-  serpapi_secret_name    = "serpapi-api-key-${var.environment}"
 }
 
 resource "google_project_service" "required_apis" {
   for_each = toset([
     "run.googleapis.com",
-    "secretmanager.googleapis.com",
     "storage.googleapis.com",
   ])
 
@@ -54,43 +51,6 @@ resource "google_storage_bucket_iam_member" "app_sa_storage" {
   member = "serviceAccount:${google_service_account.app_sa.email}"
 }
 
-# Secret containers only — no versions. Values are added manually via
-# `gcloud secrets versions add`, once per environment, so they never touch
-# Terraform state, git, or CI logs.
-resource "google_secret_manager_secret" "github_pat" {
-  project   = var.project_id
-  secret_id = local.github_pat_secret_name
-
-  replication {
-    auto {}
-  }
-
-  depends_on = [google_project_service.required_apis]
-}
-
-resource "google_secret_manager_secret" "serpapi_key" {
-  project   = var.project_id
-  secret_id = local.serpapi_secret_name
-
-  replication {
-    auto {}
-  }
-
-  depends_on = [google_project_service.required_apis]
-}
-
-resource "google_secret_manager_secret_iam_member" "github_pat_accessor" {
-  secret_id = google_secret_manager_secret.github_pat.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.app_sa.email}"
-}
-
-resource "google_secret_manager_secret_iam_member" "serpapi_key_accessor" {
-  secret_id = google_secret_manager_secret.serpapi_key.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.app_sa.email}"
-}
-
 resource "google_cloud_run_v2_service" "app" {
   name                = local.cloud_run_service_name
   project             = var.project_id
@@ -115,37 +75,13 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
-      env {
-        name  = "GOOGLE_CLOUD_PROJECT"
-        value = var.project_id
-      }
-      env {
-        name  = "GOOGLE_GENAI_USE_VERTEXAI"
-        value = "True"
-      }
-      env {
-        name  = "BLOGGER_GCS_BUCKET"
-        value = google_storage_bucket.blog_posts.name
-      }
-      env {
-        name = "GITHUB_PERSONAL_ACCESS_TOKEN"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.github_pat.secret_id
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "SERPAPI_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.serpapi_key.secret_id
-            version = "latest"
-          }
-        }
-      }
     }
+  }
+
+  # GitHub Actions owns all container environment variables, including runtime
+  # secrets. Keeping them out of Terraform avoids storing their values in state.
+  lifecycle {
+    ignore_changes = [template[0].containers[0].env]
   }
 
   depends_on = [google_project_service.required_apis]

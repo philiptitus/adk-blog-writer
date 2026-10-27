@@ -15,13 +15,21 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   destroy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Verify confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
         run: |
-          if [ "${{ inputs.confirm }}" != "${{ inputs.environment }}" ]; then
+          if [ "$CONFIRM" != "$TARGET_ENVIRONMENT" ]; then
             echo "Confirmation text did not match environment name. Aborting."
             exit 1
           fi
@@ -40,14 +48,17 @@ jobs:
       - name: Terraform workspace select
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: terraform workspace select ${{ inputs.environment }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        run: terraform workspace select "$TARGET_ENVIRONMENT"
 
       - name: Terraform plan destroy
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: terraform plan -destroy -var-file=terraform.tfvars -var-file=${{ inputs.environment }}.tfvars
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        run: terraform plan -destroy -var-file=terraform.tfvars -var-file="${TARGET_ENVIRONMENT}.tfvars"
 
       - name: Terraform destroy
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: terraform destroy -auto-approve -var-file=terraform.tfvars -var-file=${{ inputs.environment }}.tfvars
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        run: terraform destroy -auto-approve -var-file=terraform.tfvars -var-file="${TARGET_ENVIRONMENT}.tfvars"
