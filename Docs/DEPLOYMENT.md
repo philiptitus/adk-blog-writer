@@ -6,7 +6,7 @@ Infrastructure is managed with Terraform, mirroring the structure of the `Portfo
 
 - `main.tf`, `variables.tf`, `providers.tf`, `dev.tfvars`, `prod.tfvars`, `terraform.tfvars` — per-environment resources (GCS bucket, service account, Cloud Run service), selected via `terraform workspace select dev|prod`.
 - `shared/` — a separate, non-workspaced Terraform root holding only the Artifact Registry repository. Applied once, manually, before the first real deploy — kept separate so destroying one environment's workspace can never take out infrastructure the other environment depends on.
-- `Dockerfile` — single-stage, `uv`-based build, serves the agent via `adk api_server`.
+- `Dockerfile` — single-stage, `uv`-based build, serves the agent via `adk web`.
 - `.github/workflows/workflow.yaml` — PR validation without deployment credentials; plan/apply + build/deploy on trusted pushes to `main` (prod) or `develop` (dev).
 - `.github/workflows/destroy.yaml` — manual, environment-scoped teardown with a typed confirmation.
 - `.github/workflows/apply-shared.yaml` — manual, one-off: applies `shared/`.
@@ -18,6 +18,9 @@ Infrastructure is managed with Terraform, mirroring the structure of the `Portfo
 | `GOOGLE_CLOUD_PROJECT` | GitHub Actions deploy workflow | Vertex AI project |
 | `GOOGLE_GENAI_USE_VERTEXAI` | GitHub Actions deploy workflow | Use Vertex backend for Gemini |
 | `BLOGGER_GCS_BUCKET` | GitHub Actions deploy workflow | Selects the provisioned bucket for the environment |
+| `BLOG_PUBLISH_URL` | Terraform environment variables, applied by GitHub Actions | Portfolio backend publish endpoint |
+| `BLOG_TOKEN_AUDIENCE` | Terraform environment variables, applied by GitHub Actions | OIDC audience expected by the portfolio backend |
+| `BLOG_FRONTEND_BASE_URL` | Terraform environment variables, applied by GitHub Actions | Base URL used to construct the published post link |
 | `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub Actions environment secret, copied to Cloud Run during deploy | GitHub MCP server auth (optional — degrades softly if missing) |
 | `SERPAPI_API_KEY` | GitHub Actions environment secret, copied to Cloud Run during deploy | SerpApi image search (optional — degrades softly if missing) |
 
@@ -27,7 +30,7 @@ The pull-request job only runs Terraform formatting and validation with the back
 
 **Security trade-off:** GitHub Actions does not provide secrets directly to a running Cloud Run service. This workflow copies the values into ordinary Cloud Run environment variables, so they are not stored in Terraform state or intentionally printed in workflow logs, but they are visible to principals with permission to inspect Cloud Run service/revision configuration. Restrict Cloud Run read/update IAM permissions accordingly. This does not provide the same runtime secret isolation as Secret Manager. The Cloud Run service is publicly invokable, but callers cannot read its environment variables merely by invoking it. The deployment workflow also still uses the `GOOGLE_CREDENTIALS` service-account key; limit that identity to deployment permissions and consider replacing the key with GitHub OIDC/Workload Identity Federation.
 
-Terraform ignores changes to Cloud Run container environment variables because the deployment workflow owns that configuration. The workflow sets the complete environment variable list on each deployment. To change one of these variables, update this workflow or its environment configuration; Terraform alone will not apply the change.
+Terraform ignores changes to Cloud Run container environment variables to avoid managing the runtime API keys in Terraform state. The deployment workflow incrementally updates the Cloud Run environment, including the public publishing configuration read from Terraform outputs, without replacing other variables. To change publishing URLs/audience, update the appropriate `dev.tfvars` or `prod.tfvars`; the next deployment will apply those values.
 
 **Migration from Secret Manager:** Add the existing values to the matching GitHub environment secrets before deploying this change. The next Terraform apply removes the Terraform-managed Secret Manager containers and access grants. After the new revision is deployed, rotate the credentials if the old values may have been exposed. Old Cloud Run revisions can retain their prior environment-variable values, so restrict revision inspection and remove old revisions when they are no longer needed.
 

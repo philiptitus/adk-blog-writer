@@ -12,6 +12,7 @@ resource "google_project_service" "required_apis" {
   for_each = toset([
     "run.googleapis.com",
     "storage.googleapis.com",
+    "aiplatform.googleapis.com",
   ])
 
   project            = var.project_id
@@ -45,6 +46,13 @@ resource "google_service_account" "app_sa" {
   display_name = "blogger-agent runtime SA (${var.environment})"
 }
 
+# Lets the runtime SA call Gemini models via Vertex AI (aiplatform.endpoints.predict).
+resource "google_project_iam_member" "app_sa_vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.app_sa.email}"
+}
+
 resource "google_storage_bucket_iam_member" "app_sa_storage" {
   bucket = google_storage_bucket.blog_posts.name
   role   = "roles/storage.objectAdmin"
@@ -75,6 +83,30 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = var.project_id
+      }
+      env {
+        name  = "GOOGLE_GENAI_USE_VERTEXAI"
+        value = "True"
+      }
+      env {
+        name  = "BLOGGER_GCS_BUCKET"
+        value = google_storage_bucket.blog_posts.name
+      }
+      env {
+        name  = "BLOG_PUBLISH_URL"
+        value = var.blog_publish_url
+      }
+      env {
+        name  = "BLOG_TOKEN_AUDIENCE"
+        value = var.blog_token_audience
+      }
+      env {
+        name  = "BLOG_FRONTEND_BASE_URL"
+        value = var.blog_frontend_base_url
+      }
     }
   }
 
@@ -87,6 +119,14 @@ resource "google_cloud_run_v2_service" "app" {
   depends_on = [google_project_service.required_apis]
 }
 
+# Public invoker — real access control lives in front of this, via
+# Cloudflare Access on a custom domain proxied to this service. (Cloud
+# Run's own native IAP was tried first but is unusable: it depends on the
+# IAP OAuth Admin API, which Google permanently shut down 2026-03-19.)
+# The raw *.run.app URL below is still technically reachable directly by
+# anyone who has it — not advertised/indexed anywhere, but not
+# cryptographically gated either. Accepted tradeoff for a much simpler
+# setup than a Cloudflare Tunnel sidecar.
 resource "google_cloud_run_v2_service_iam_member" "app_public" {
   project  = var.project_id
   location = google_cloud_run_v2_service.app.location

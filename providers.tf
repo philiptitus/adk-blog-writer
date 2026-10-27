@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "myze-state"
+    bucket = "myzer-state"
     prefix = "blogger-agent/terraform/state"
   }
 }

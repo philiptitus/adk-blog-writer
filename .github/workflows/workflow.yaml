@@ -92,10 +92,13 @@ jobs:
           SERPAPI_KEY: ${{ secrets.SERPAPI_API_KEY }}
           ENVIRONMENT: ${{ steps.env.outputs.name }}
         run: |
+          BLOG_PUBLISH_URL="$(terraform output -raw blog_publish_url)"
+          BLOG_TOKEN_AUDIENCE="$(terraform output -raw blog_token_audience)"
+          BLOG_FRONTEND_BASE_URL="$(terraform output -raw blog_frontend_base_url)"
           gcloud run services update "blogger-agent-${ENVIRONMENT}" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
-            --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_GENAI_USE_VERTEXAI=True,BLOGGER_GCS_BUCKET=${GCS_BUCKET_BASE}-${ENVIRONMENT},GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PAT},SERPAPI_API_KEY=${SERPAPI_KEY}"
+            --update-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_GENAI_USE_VERTEXAI=True,BLOGGER_GCS_BUCKET=${GCS_BUCKET_BASE}-${ENVIRONMENT},BLOG_PUBLISH_URL=${BLOG_PUBLISH_URL},BLOG_TOKEN_AUDIENCE=${BLOG_TOKEN_AUDIENCE},BLOG_FRONTEND_BASE_URL=${BLOG_FRONTEND_BASE_URL},GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PAT},SERPAPI_API_KEY=${SERPAPI_KEY}"
 
       - name: Build and push image
         run: |
