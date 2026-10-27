@@ -11,13 +11,15 @@ Infrastructure is managed with Terraform, mirroring the structure of the `Portfo
 - `.github/workflows/destroy.yaml` — manual, environment-scoped teardown with a typed confirmation.
 - `.github/workflows/apply-shared.yaml` — manual, one-off: applies `shared/`.
 
+The dev drafts/images bucket is `blogs-dev`. The prod bucket uses the project-specific name `blogs-fiona-464509-prod` because GCS bucket names are globally unique and `blogs-prod` was unavailable.
+
 ## Config / Secrets
 
 | Env var | Source | Purpose |
 |---|---|---|
 | `GOOGLE_CLOUD_PROJECT` | GitHub Actions deploy workflow | Vertex AI project |
 | `GOOGLE_GENAI_USE_VERTEXAI` | GitHub Actions deploy workflow | Use Vertex backend for Gemini |
-| `BLOGGER_GCS_BUCKET` | GitHub Actions deploy workflow | Selects the provisioned bucket for the environment |
+| `BLOGGER_GCS_BUCKET` | Terraform output applied by GitHub Actions | Selects the provisioned bucket for the environment |
 | `BLOG_PUBLISH_URL` | Terraform environment variables, applied by GitHub Actions | Portfolio backend publish endpoint |
 | `BLOG_TOKEN_AUDIENCE` | Terraform environment variables, applied by GitHub Actions | OIDC audience expected by the portfolio backend |
 | `BLOG_FRONTEND_BASE_URL` | Terraform environment variables, applied by GitHub Actions | Base URL used to construct the published post link |
