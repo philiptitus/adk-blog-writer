@@ -74,6 +74,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Migrate legacy Cloud Run secret environment variables
+        if: steps.env.outputs.name == 'dev'
         env:
           GITHUB_PAT: ${{ secrets.BLOGGER_GITHUB_PAT }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_API_KEY }}
@@ -89,7 +90,7 @@ jobs:
               --project "$PROJECT_ID" \
               --region "$REGION" \
               --update-env-vars "GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PAT},SERPAPI_API_KEY=${SERPAPI_KEY}"
-          elif [[ "$SERVICE_INFO" == *"not found"* || "$SERVICE_INFO" == *"NOT_FOUND"* ]]; then
+          elif [[ "$SERVICE_INFO" == *"not found"* || "$SERVICE_INFO" == *"NOT_FOUND"* || "$SERVICE_INFO" == *"Cannot find service"* ]]; then
             echo "Cloud Run service does not exist yet; Terraform will create it."
           else
             printf '%s\n' "$SERVICE_INFO" >&2
